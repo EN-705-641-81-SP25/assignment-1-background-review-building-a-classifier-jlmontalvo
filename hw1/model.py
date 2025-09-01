@@ -73,6 +73,17 @@ def featurize(sentence: str, embeddings: gensim.models.keyedvectors.KeyedVectors
     # None - if the vector sequence is empty, i.e. the sentence is empty or None of the words in the sentence is in the embedding vocabulary
     # A torch tensor of shape (embed_dim,) - the average word embedding of the sentence
     # Hint: follow the hints in the pdf description
+    
+    # If no vectors were found, return None
+    if len(vectors) == 0:
+        return None
+    
+    # Convert list of vectors to numpy array and compute mean
+    vectors_array = np.array(vectors)
+    avg_embedding = np.mean(vectors_array, axis=0)
+    
+    # Convert to torch tensor
+    return torch.FloatTensor(avg_embedding)
 
 
 def create_tensor_dataset(raw_data: Dict[str, List[Union[int, str]]],
@@ -82,6 +93,14 @@ def create_tensor_dataset(raw_data: Dict[str, List[Union[int, str]]],
 
         # TODO: complete the for loop to featurize each sentence
         # only add the feature and label to the list if the feature is not None
+        
+        # Featurize the text
+        feature = featurize(text, embeddings)
+        
+        # Only add if feature is not None
+        if feature is not None:
+            all_features.append(feature)
+            all_labels.append(label)
 
         # your code ends here
 
@@ -114,6 +133,9 @@ class SentimentClassifier(nn.Module):
 
         # TODO: define the linear layer
         # Hint: follow the hints in the pdf description
+        
+        # Linear layer that maps from embed_dim to num_classes
+        self.linear = nn.Linear(embed_dim, num_classes)
 
         # your code ends here
 
@@ -122,6 +144,9 @@ class SentimentClassifier(nn.Module):
     def forward(self, inp):
         # TODO: complete the forward function
         # Hint: follow the hints in the pdf description
+        
+        # Apply linear transformation
+        logits = self.linear(inp)
 
         # your code ends here
 
@@ -139,8 +164,14 @@ def accuracy(logits: torch.FloatTensor, labels: torch.LongTensor) -> torch.Float
     # Hint: follow the hints in the pdf description, the return should be a tensor of 0s and 1s with the same shape as labels
     # labels is a tensor of shape (batch_size,)
     # logits is a tensor of shape (batch_size, num_classes)
-
-    return ...
+    
+    # Get predicted classes by taking argmax along the class dimension
+    predicted = torch.argmax(logits, dim=1)
+    
+    # Compare predictions with true labels (1 if correct, 0 if incorrect)
+    correct = (predicted == labels).float()
+    
+    return correct
 
 
 def evaluate(model: SentimentClassifier, eval_dataloader: DataLoader) -> Tuple[float, float]:
